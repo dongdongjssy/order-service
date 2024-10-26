@@ -1,4 +1,4 @@
-package ma
+package main
 
 import (
 	"github.com/dongdongjssy/order-service/handlers"
