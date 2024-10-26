@@ -1,0 +1,48 @@
+basePath: /v1
+swagger: "2.0"
+info:
+  title: Orders APIs
+  version: "1.0"
+paths:
+  /orders/{customerId}:
+    get:
+      summary: get all items for a customer
+      tags:
+      - Orders
+      parameters:
+      - description: customer id
+        in: query
+        name: customerId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: bad request
+        "404":
+          description: not found
+        "500":
+          description: internal server error
+  /orders/summary:
+    get:
+      summary: get a list of summaries for all customers
+      tags:
+      - Orders
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: internal server error
+  /orders:
+    post:
+      summary: save a list of orders
+      tags:
+      - Orders
+      responses:
+        "200":
+          description: created
+        "400":
+          description: bad request
+        "500":
+          description: internal server error
