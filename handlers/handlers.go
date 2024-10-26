@@ -11,5 +11,5 @@ func SaveOrder(ctx *gin.Context) {
 func GetItemsForCustomer(ctx *gin.Context) {
 }
 
-func GetSummaries(ctx *gin.Context) {
+func GetSummary(ctx *gin.Context) {
 }

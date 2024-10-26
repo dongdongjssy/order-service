@@ -9,8 +9,8 @@ func main() {
 	server := gin.Default()
 
 	server.POST("/orders", handlers.SaveOrder)
-	server.GET("/items/:customerId", handlers.GetItemsForCustomer)
-	server.GET("/summaries", handlers.GetSummaries)
+	server.GET("/orders/:customerId", handlers.GetItemsForCustomer)
+	server.GET("/orders/summary", handlers.GetSummary)
 
 	server.Run(":8000")
 }
