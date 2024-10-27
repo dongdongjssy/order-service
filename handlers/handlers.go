@@ -16,6 +16,8 @@ const (
 
 	ERR_INVALID_BODY          = "failed to parse request body"
 	ERR_INVALID_FIELD         = "error in filed '%s': %s"
+	ERR_SHOULD_BE_GTE         = "should be greater than or equal to %s"
+	ERR_MIN_NOT_SATISFIED     = "should contains at least %s element"
 	ERR_DUPLICATED_ORDER      = "duplicated order found"
 	ERR_INTERNAL_SERVER_ERROR = "internal server error"
 )
@@ -58,7 +60,7 @@ func TransformOrders(ctx *gin.Context) {
 // [
 //
 //	"error in field 'customerId': required",
-//	"error in field 'costEur': required"
+//	"error in field 'costEur': should be greater or equal to 0"
 //
 // ]
 func parseValidationErrors(err *error) *[]string {
@@ -67,7 +69,17 @@ func parseValidationErrors(err *error) *[]string {
 		for _, sve := range sliceValidationErrs {
 			if validationErrs, ok := sve.(validator.ValidationErrors); ok {
 				for _, ve := range validationErrs {
-					errors = append(errors, fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), ve.Tag()))
+					switch ve.Tag() {
+					case "required":
+						errors = append(errors,
+							fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), ve.Tag()))
+					case "gte":
+						errors = append(errors,
+							fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), fmt.Sprintf(ERR_SHOULD_BE_GTE, ve.Param())))
+					case "min":
+						errors = append(errors,
+							fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), fmt.Sprintf(ERR_MIN_NOT_SATISFIED, ve.Param())))
+					}
 				}
 			}
 		}
@@ -102,12 +114,13 @@ func toLowerFirstChar(str string) string {
 }
 
 func transformOrders(orders *[]model.Order) (*[]model.Summary, error) {
+	// store a list of summaries for all customers
 	var summaries []model.Summary
-	for _, order := range *orders {
-		for i := range order.Items {
-			order.Items[i].CustomerId = order.CustomerId
-		}
 
+	// store
+	// customerOrders := make(map[string]int)
+
+	for _, order := range *orders {
 		summary := model.Summary{
 			CustomerId:          order.CustomerId,
 			NbrOfPurchasedItems: len(order.Items),
