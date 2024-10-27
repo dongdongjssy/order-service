@@ -4,45 +4,116 @@ info:
   title: Orders APIs
   version: "1.0"
 paths:
-  /orders/{customerId}:
-    get:
-      summary: get all items for a customer
+  /orders/transform:
+    post:
+      summary: Transform a list of orders
+      description: It transforms a list of orders to the format of a list of customer items which consists of item details, the count of purchased items, and total cost etc.  
       tags:
       - Orders
       parameters:
-      - description: customer id
-        in: query
-        name: customerId
-        required: true
+        - description: a list of orders
+          in: body
+          name: orders
+          required: true
+          schema:
+            type: array
+            items: 
+              $ref: '#/definitions/Order'
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/SuccessResponse'
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+definitions:
+  ItemRequest:
+    properties: 
+      itemId:
         type: string
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: bad request
-        "404":
-          description: not found
-        "500":
-          description: internal server error
-  /orders/summary:
-    get:
-      summary: get a list of summaries for all customers
-      tags:
-      - Orders
-      responses:
-        "200":
-          description: OK
-        "500":
-          description: internal server error
-  /orders:
-    post:
-      summary: save a list of orders
-      tags:
-      - Orders
-      responses:
-        "200":
-          description: created
-        "400":
-          description: bad request
-        "500":
-          description: internal server error
+        example: "20201"
+      costEur:
+        type: number
+        example: 2.5
+    required:
+      - itemId
+      - costEur
+  ItemResponse:
+    properties: 
+      customerId:
+        type: string
+        example: "01"
+      itemId:
+        type: string
+        example: "20201"
+      costEur:
+        type: number
+        example: 2.5
+    required:
+      - customerId
+      - itemId
+      - costEur
+  Order:
+    properties: 
+      customerId:
+        type: string
+        example: "01"
+      orderId:
+        type: string
+        example: "50"
+      timestamp:
+        type: string
+        example: "1637245070513"
+      items:
+        type: array
+        items: 
+          $ref: "#/definitions/ItemRequest"
+  Summary:
+    properties: 
+      customerId:
+        type: string
+        example: "01"
+      nbrOfPurchasedItems:
+        type: number
+        example: 200
+      totalAmountEur:
+        type: number
+        example: 15000
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/ItemResponse'
+  SuccessResponse:
+    properties: 
+      code:
+        type: integer
+        example: 200
+      message:
+        type: string
+        example: "success"
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/Summary'
+    required:
+      - code
+      - message
+      - data
+  ErrorResponse:
+    properties: 
+      code:
+        type: integer
+      message:
+        type: string
+      errors:
+        type: object
+    required:
+      - code
+      - message
+      - errors

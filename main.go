@@ -5,12 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
+func setupRouter() *gin.Engine {
 	server := gin.Default()
+	server.POST("/v1/orders/transform", handlers.TransformOrders)
+	return server
+}
 
-	server.POST("/v1/orders", handlers.SaveOrder)
-	server.GET("/v1/orders/:customerId", handlers.GetItemsForCustomer)
-	server.GET("/v1/orders/summary", handlers.GetSummary)
-
-	server.Run(":8000")
+func main() {
+	server := setupRouter()
+	server.Run(":8080")
 }

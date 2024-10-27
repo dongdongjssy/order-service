@@ -1,6 +1,7 @@
 package model
 
 type Item struct {
-	ItemId  string  `json:"itemId"`
-	CostEur float64 `json:"constEur"`
+	CustomerId string  `json:"customerId,omitempty"`
+	ItemId     string  `json:"itemId" binding:"required"`
+	CostEur    float64 `json:"costEur" binding:"required"`
 }
