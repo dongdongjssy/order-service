@@ -14,40 +14,96 @@ import (
 const (
 	API_SUCCESS = "success"
 
-	ERR_INVALID_BODY     = "failed to parse request body"
-	ERR_INVALID_FIELD    = "error in filed '%s': %s"
-	ERR_DUPLICATED_ORDER = "duplicated order found"
+	ERR_INVALID_BODY          = "failed to parse request body"
+	ERR_INVALID_FIELD         = "error in filed '%s': %s"
+	ERR_DUPLICATED_ORDER      = "duplicated order found"
+	ERR_INTERNAL_SERVER_ERROR = "internal server error"
 )
 
+// It transforms a list of orders to the format of a list of customer items which
+// consists of item details, the count of purchased items, and total cost etc.
 func TransformOrders(ctx *gin.Context) {
 	// parse request body
 	var orders []model.Order
 	if err := ctx.ShouldBindJSON(&orders); err != nil {
-		// response error details
-		if sliceValidationErrs, ok := err.(binding.SliceValidationError); ok {
-			var errors []string
-			for _, sve := range sliceValidationErrs {
-				if validationErrs, ok := sve.(validator.ValidationErrors); ok {
-					for _, ve := range validationErrs {
-						errors = append(errors, fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), ve.Tag()))
-					}
-				}
-			}
-
-			if len(errors) > 0 {
-				ctx.JSON(http.StatusBadRequest, model.Response{
-					Code:    http.StatusBadRequest,
-					Message: ERR_INVALID_BODY,
-					Errors:  errors,
-				})
-				return
-			}
+		// return error details
+		errors := parseValidationErrors(&err)
+		if len(*errors) > 0 {
+			ctx.JSON(http.StatusBadRequest, model.Response{
+				Code:    http.StatusBadRequest,
+				Message: ERR_INVALID_BODY,
+				Errors:  *errors,
+			})
+			return
 		}
+
 	}
 
 	// transform orders
-	summaries := make([]model.Summary, len(orders))
-	for index, order := range orders {
+	if summaries, err := transformOrders(&orders); err != nil {
+
+	} else {
+		ctx.JSON(http.StatusOK, model.Response{
+			Code:    http.StatusOK,
+			Message: API_SUCCESS,
+			Data:    *summaries,
+		})
+	}
+}
+
+// Parse validation errors with a list of readable strings
+//
+// The method abstracts failed fields and reasons from validation errors and create a list
+// of human readable error messages. e.g.
+// [
+//
+//	"error in field 'customerId': required",
+//	"error in field 'costEur': required"
+//
+// ]
+func parseValidationErrors(err *error) *[]string {
+	var errors []string
+	if sliceValidationErrs, ok := (*err).(binding.SliceValidationError); ok {
+		for _, sve := range sliceValidationErrs {
+			if validationErrs, ok := sve.(validator.ValidationErrors); ok {
+				for _, ve := range validationErrs {
+					errors = append(errors, fmt.Sprintf(ERR_INVALID_FIELD, toLowerFirstChar(ve.Field()), ve.Tag()))
+				}
+			}
+		}
+	}
+	return &errors
+}
+
+// Calculate the total purchased amount of a customer.
+//
+// This method provides a solution similar as reduce method for array in other programming languages.
+func reduceAmount(array *[]model.Item, initial float64, f func(float64, *model.Item) float64) float64 {
+	result := initial
+	for _, v := range *array {
+		result = f(result, &v)
+	}
+	return result
+}
+
+// Make first letter of a string as lowercase.
+//
+// Structure field names start with upper case due to json binding but in json field names usually
+// start with lower case, so when validation error happens in any fields, we update the case of
+// first letter to make the error messages consist with the json format from the request.
+func toLowerFirstChar(str string) string {
+	if len(str) == 0 {
+		return str
+	}
+
+	strSlice := []rune(str)
+	strSlice[0] = unicode.ToLower(strSlice[0])
+	return string(strSlice)
+}
+
+func transformOrders(orders *[]model.Order) (*[]model.Summary, error) {
+	var summaries []model.Summary
+	for _, order := range *orders {
 		for i := range order.Items {
 			order.Items[i].CustomerId = order.CustomerId
 		}
@@ -59,32 +115,8 @@ func TransformOrders(ctx *gin.Context) {
 			TotalAmountEur:      reduceAmount(&order.Items, 0, func(acc float64, i *model.Item) float64 { return acc + i.CostEur }),
 		}
 
-		summaries[index] = summary
+		summaries = append(summaries, summary)
 	}
 
-	ctx.JSON(http.StatusOK, model.Response{
-		Code:    http.StatusOK,
-		Message: API_SUCCESS,
-		Data:    summaries,
-	})
-}
-
-func reduceAmount(array *[]model.Item, initial float64,
-	f func(float64, *model.Item) float64,
-) float64 {
-	result := initial
-	for _, v := range *array {
-		result = f(result, &v)
-	}
-	return result
-}
-
-func toLowerFirstChar(str string) string {
-	if len(str) == 0 {
-		return str
-	}
-
-	strSlice := []rune(str)
-	strSlice[0] = unicode.ToLower(strSlice[0])
-	return string(strSlice)
+	return &summaries, nil
 }
