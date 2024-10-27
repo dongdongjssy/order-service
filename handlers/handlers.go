@@ -114,21 +114,38 @@ func toLowerFirstChar(str string) string {
 }
 
 func transformOrders(orders *[]model.Order) (*[]model.Summary, error) {
-	// store a list of summaries for all customers
-	var summaries []model.Summary
-
-	// store
-	// customerOrders := make(map[string]int)
-
+	// check duplication and aggregate customer orders
+	// TODO: make it concurrent
+	customerOrders := make(map[string]map[string]*model.Order)
 	for _, order := range *orders {
-		summary := model.Summary{
-			CustomerId:          order.CustomerId,
-			NbrOfPurchasedItems: len(order.Items),
-			Items:               order.Items,
-			TotalAmountEur:      reduceAmount(&order.Items, 0, func(acc float64, i *model.Item) float64 { return acc + i.CostEur }),
+		if customerOrders[order.CustomerId] != nil {
+			if customerOrders[order.CustomerId][order.OrderId] != nil {
+				continue
+			} else {
+				customerOrders[order.CustomerId][order.OrderId] = &order
+			}
+		} else {
+			customerOrders[order.CustomerId] =
+				map[string]*model.Order{order.OrderId: &order}
+		}
+	}
+
+	// store a list of summaries for all customers
+	summaries := []model.Summary{}
+	for cId, oList := range customerOrders {
+		amount := 0.0
+		items := []model.Item{}
+		for _, o := range oList {
+			items = append(items, o.Items...)
+			amount = reduceAmount(&o.Items, amount, func(acc float64, i *model.Item) float64 { return acc + i.CostEur })
 		}
 
-		summaries = append(summaries, summary)
+		summaries = append(summaries, model.Summary{
+			CustomerId:          cId,
+			NbrOfPurchasedItems: len(items),
+			Items:               items,
+			TotalAmountEur:      amount,
+		})
 	}
 
 	return &summaries, nil
