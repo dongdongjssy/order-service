@@ -112,7 +112,9 @@ definitions:
       message:
         type: string
       errors:
-        type: object
+        type: array
+        items: 
+          type: string
     required:
       - code
       - message
