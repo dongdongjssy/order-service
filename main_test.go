@@ -17,7 +17,36 @@ func TestOrdersTransformAPISuccess(t *testing.T) {
 	assert := assert.New(t)
 	server := setupRouter()
 
-	orders := []model.Order{
+	singleOrder := &[]model.Order{
+		{CustomerId: "01", OrderId: "10", Timestamp: "1637245070513", Items: []model.Item{
+			{ItemId: "20201", CostEur: 2},
+			{ItemId: "20202", CostEur: 4.1},
+		}},
+	}
+
+	duplicateOrder := &[]model.Order{
+		{CustomerId: "01", OrderId: "10", Timestamp: "1637245070513", Items: []model.Item{
+			{ItemId: "20201", CostEur: 2},
+			{ItemId: "20202", CostEur: 4.1},
+		}},
+		{CustomerId: "01", OrderId: "10", Timestamp: "1637245070513", Items: []model.Item{
+			{ItemId: "20201", CostEur: 2},
+			{ItemId: "20202", CostEur: 4.1},
+		}},
+	}
+
+	aggregateOrder := &[]model.Order{
+		{CustomerId: "01", OrderId: "10", Timestamp: "1637245070513", Items: []model.Item{
+			{ItemId: "20201", CostEur: 2},
+			{ItemId: "20202", CostEur: 4},
+		}},
+		{CustomerId: "01", OrderId: "11", Timestamp: "1637245070513", Items: []model.Item{
+			{ItemId: "20203", CostEur: 2.2},
+			{ItemId: "20204", CostEur: 4},
+		}},
+	}
+
+	multipleOrders := &[]model.Order{
 		{CustomerId: "01", OrderId: "10", Timestamp: "1637245070513", Items: []model.Item{
 			{ItemId: "20201", CostEur: 2},
 			{ItemId: "20202", CostEur: 4},
@@ -27,9 +56,40 @@ func TestOrdersTransformAPISuccess(t *testing.T) {
 		}},
 	}
 
-	t.Run("transform success", func(t *testing.T) {
+	tests := map[string]struct {
+		input               *[]model.Order
+		customerId          string
+		nbrOfPurchasedItems int
+		totalAmountEur      float64
+	}{
+		"single order":     {singleOrder, "01", 2, 6.1},
+		"duplicated order": {duplicateOrder, "01", 2, 6.1},
+		"aggregate orders": {aggregateOrder, "01", 4, 12.2},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// build an order
+			ordersJson, _ := json.Marshal(*(test.input))
+
+			// send request
+			rec := postRequest(server, strings.NewReader(string(ordersJson)))
+
+			// assertion
+			var response model.Response
+			json.Unmarshal(rec.Body.Bytes(), &response)
+
+			assert.Equal(http.StatusOK, response.Code)
+			assert.Equal(handlers.API_SUCCESS, response.Message)
+			assert.Equal(test.nbrOfPurchasedItems, response.Data[0].NbrOfPurchasedItems)
+			assert.Equal(test.nbrOfPurchasedItems, len(response.Data[0].Items))
+			assert.Equal(test.totalAmountEur, response.Data[0].TotalAmountEur)
+		})
+	}
+
+	t.Run("multiple orders", func(t *testing.T) {
 		// build an order
-		ordersJson, _ := json.Marshal(orders)
+		ordersJson, _ := json.Marshal(*multipleOrders)
 
 		// send request
 		rec := postRequest(server, strings.NewReader(string(ordersJson)))
@@ -43,21 +103,21 @@ func TestOrdersTransformAPISuccess(t *testing.T) {
 		assert.Equal(2, len(response.Data))
 
 		for _, data := range response.Data {
-			if data.CustomerId != orders[0].CustomerId && data.CustomerId != orders[1].CustomerId {
+			if data.CustomerId != (*multipleOrders)[0].CustomerId && data.CustomerId != (*multipleOrders)[1].CustomerId {
 				t.Errorf(
 					"invalid response, expected customer id with value of either '%s' or '%s'",
-					orders[0].CustomerId,
-					orders[1].CustomerId,
+					(*multipleOrders)[0].CustomerId,
+					(*multipleOrders)[1].CustomerId,
 				)
 			}
 
-			if data.CustomerId == orders[0].CustomerId {
+			if data.CustomerId == (*multipleOrders)[0].CustomerId {
 				assert.Equal(2, data.NbrOfPurchasedItems)
 				assert.Equal(float64(6), data.TotalAmountEur)
 				assert.Equal(2, len(data.Items))
 			}
 
-			if data.CustomerId == orders[1].CustomerId {
+			if data.CustomerId == (*multipleOrders)[1].CustomerId {
 				assert.Equal(1, data.NbrOfPurchasedItems)
 				assert.Equal(2.1, data.TotalAmountEur)
 				assert.Equal(1, len(data.Items))
@@ -70,38 +130,38 @@ func TestOrdersTransformAPIErrorCases(t *testing.T) {
 	assert := assert.New(t)
 	server := setupRouter()
 
-	ordersMissingCustomerId := []model.Order{
+	ordersMissingCustomerId := &[]model.Order{
 		{OrderId: "50", Timestamp: "1637245070513", Items: []model.Item{
 			{ItemId: "20201", CostEur: 2},
 		}},
 	}
 
-	ordersMissingOrderId := []model.Order{
+	ordersMissingOrderId := &[]model.Order{
 		{CustomerId: "01", Timestamp: "1637245070513", Items: []model.Item{
 			{ItemId: "20201", CostEur: 2},
 		}},
 	}
 
-	ordersMissingTimestamp := []model.Order{
+	ordersMissingTimestamp := &[]model.Order{
 		{CustomerId: "01", OrderId: "50", Items: []model.Item{
 			{ItemId: "20201", CostEur: 2},
 		}},
 	}
 
-	ordersMissingItems := []model.Order{{CustomerId: "01", OrderId: "50", Timestamp: "1637245070513"}}
+	ordersMissingItems := &[]model.Order{{CustomerId: "01", OrderId: "50", Timestamp: "1637245070513"}}
 
-	ordersWithEmptyItems := []model.Order{
+	ordersWithEmptyItems := &[]model.Order{
 		{CustomerId: "01", OrderId: "50", Timestamp: "1637245070513", Items: []model.Item{}},
 	}
 
-	ordersWithInvalidCost := []model.Order{
+	ordersWithInvalidCost := &[]model.Order{
 		{CustomerId: "01", OrderId: "50", Timestamp: "1637245070513", Items: []model.Item{
 			{ItemId: "20201", CostEur: -2},
 		}},
 	}
 
-	var tests = map[string]struct {
-		input         []model.Order
+	tests := map[string]struct {
+		input         *[]model.Order
 		expectedError string
 	}{
 		"missing customer id": {ordersMissingCustomerId, "error in field 'customerId': required"},
@@ -115,7 +175,7 @@ func TestOrdersTransformAPIErrorCases(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			// build an order
-			ordersJson, _ := json.Marshal(test.input)
+			ordersJson, _ := json.Marshal(*test.input)
 
 			// send request
 			rec := postRequest(server, strings.NewReader(string(ordersJson)))

@@ -131,7 +131,7 @@ func toLowerFirstChar(str string) string {
 //     |____________|    |_________|_______|
 //
 //  2. second step is building a list of summaries against the data from above
-//     step, example of final response is:
+//     step by channels, example of final response is:
 //     {
 //     "customerId": "01",
 //     "nbrOfPurchasedItems": 2,
@@ -143,7 +143,6 @@ func toLowerFirstChar(str string) string {
 //     }
 func transformOrders(orders *[]model.Order) *[]model.Summary {
 	// check duplication and aggregate customer orders
-	// TODO: make it concurrent
 	customerOrders := make(map[string]map[string]*model.Order)
 	for _, o := range *orders {
 		if customerOrders[o.CustomerId] != nil {
@@ -158,23 +157,35 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	}
 
 	// get a list of summaries for all customers
-	summaries := []model.Summary{}
-	for cId, oList := range customerOrders {
-		amount := 0.0
-		items := []model.Item{}
-		for _, o := range oList {
-			items = append(items, o.Items...)
-			amount = reduceAmount(&o.Items, amount, func(acc float64, i *model.Item) float64 {
-				return acc + i.CostEur
-			})
-		}
+	summaries := make([]model.Summary, 0, len(customerOrders))
+	ch := make(chan *model.Summary, 100)
+	go func() {
+		for cId, oList := range customerOrders {
+			amount := 0.0
+			items := []model.Item{}
+			for _, o := range oList {
+				items = append(items, o.Items...)
+				amount = reduceAmount(&o.Items, amount, func(acc float64, i *model.Item) float64 {
+					return acc + i.CostEur
+				})
+			}
 
-		summaries = append(summaries, model.Summary{
-			CustomerId:          cId,
-			NbrOfPurchasedItems: len(items),
-			Items:               items,
-			TotalAmountEur:      amount,
-		})
+			ch <- &model.Summary{
+				CustomerId:          cId,
+				NbrOfPurchasedItems: len(items),
+				Items:               items,
+				TotalAmountEur:      amount,
+			}
+		}
+		close(ch)
+	}()
+
+	for {
+		if s, ok := <-ch; !ok {
+			break
+		} else {
+			summaries = append(summaries, *s)
+		}
 	}
 
 	return &summaries
