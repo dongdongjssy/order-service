@@ -15,7 +15,7 @@ const (
 	API_SUCCESS = "success"
 
 	ERR_INVALID_BODY          = "failed to parse request body"
-	ERR_INVALID_FIELD         = "error in filed '%s': %s"
+	ERR_INVALID_FIELD         = "error in field '%s': %s"
 	ERR_SHOULD_BE_GTE         = "should be greater than or equal to %s"
 	ERR_MIN_NOT_SATISFIED     = "should contains at least %s element"
 	ERR_INTERNAL_SERVER_ERROR = "internal server error"
@@ -81,6 +81,8 @@ func parseValidationErrors(err *error) *[]string {
 				}
 			}
 		}
+	} else {
+		errors = append(errors, (*err).Error())
 	}
 	return &errors
 }
