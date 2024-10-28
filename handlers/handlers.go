@@ -156,8 +156,7 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 		}
 	}
 
-	// get a list of summaries for all customers
-	summaries := make([]model.Summary, 0, len(customerOrders))
+	// process data for each customer and put them into channel concurrently
 	ch := make(chan *model.Summary, 100)
 	go func() {
 		for cId, oList := range customerOrders {
@@ -180,6 +179,8 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 		close(ch)
 	}()
 
+	// get a list of summaries for all customers from the channel
+	summaries := make([]model.Summary, 0, len(customerOrders))
 	for {
 		if s, ok := <-ch; !ok {
 			break
