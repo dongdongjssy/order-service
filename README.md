@@ -29,3 +29,22 @@ To run all auto tests, in root folder run command:
 ```sh
 go test ./... -v
 ```
+
+## Benchmark
+
+To run benchmark tests, in handlers folder run command:
+
+```sh
+go test -bench=TransformOrders
+```
+
+Following is an example of time used to transform 1, 10, 100, 1000, 10000, 100000 orders
+
+```
+BenchmarkTransformOrders1-16               98226             13388 ns/op
+BenchmarkTransformOrders10-16              62355             19745 ns/op
+BenchmarkTransformOrders100-16             10000            100655 ns/op
+BenchmarkTransformOrders1000-16             1143           1043607 ns/op
+BenchmarkTransformOrders10000-16             105          11145297 ns/op
+BenchmarkTransformOrders100000-16              8         125425575 ns/op
+```
