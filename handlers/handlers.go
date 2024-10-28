@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"unicode"
 
 	"github.com/dongdongjssy/order-service/model"
@@ -144,50 +145,53 @@ func toLowerFirstChar(str string) string {
 //     ]
 //     }
 func transformOrders(orders *[]model.Order) *[]model.Summary {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// check duplication and aggregate customer orders
 	log.Info("checking duplications and aggregating customer orders...")
-	customerOrders := make(map[string]map[string]*model.Order)
-	for _, o := range *orders {
-		if customerOrders[o.CustomerId] != nil {
-			if customerOrders[o.CustomerId][o.OrderId] != nil {
-				log.Info("found duplicated order, skip it")
-				continue
+	ch1 := make(chan *model.Order, 100)
+	go func(chan<- *model.Order) {
+		defer wg.Done()
+
+		coMapping := make(map[string]interface{}, len(*orders))
+		for _, o := range *orders {
+			key := fmt.Sprintf("%s:%s", o.CustomerId, o.OrderId)
+			if coMapping[key] == nil {
+				coMapping[key] = key
+				ch1 <- &o
 			} else {
-				customerOrders[o.CustomerId][o.OrderId] = &o
+				continue
 			}
-		} else {
-			customerOrders[o.CustomerId] = map[string]*model.Order{o.OrderId: &o}
 		}
-	}
+		close(ch1)
+	}(ch1)
 
 	// process data for each customer and put them into channel concurrently
 	log.Info("building a summary report for each customer...")
-	ch := make(chan *model.Summary, 100)
-	go func() {
-		for cId, oList := range customerOrders {
-			amount := 0.0
-			items := []model.Item{}
-			for _, o := range oList {
-				items = append(items, o.Items...)
-				amount = reduceAmount(&o.Items, amount, func(acc float64, i *model.Item) float64 {
-					return acc + i.CostEur
-				})
-			}
+	ch2 := make(chan *model.Summary, 100)
+	go func(<-chan *model.Order, chan<- *model.Summary) {
+		defer wg.Done()
+		for o := range ch1 {
+			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
+				return acc + i.CostEur
+			})
 
-			ch <- &model.Summary{
-				CustomerId:          cId,
-				NbrOfPurchasedItems: len(items),
-				Items:               items,
+			ch2 <- &model.Summary{
+				CustomerId:          o.CustomerId,
+				NbrOfPurchasedItems: len(o.Items),
+				Items:               o.Items,
 				TotalAmountEur:      amount,
 			}
 		}
-		close(ch)
-	}()
+		close(ch2)
+	}(ch1, ch2)
 
 	// get a list of summaries for all customers from the channel
-	summaries := make([]model.Summary, 0, len(customerOrders))
+	wg.Wait()
+	summaries := make([]model.Summary, 0, len(*orders))
 	for {
-		if s, ok := <-ch; !ok {
+		if s, ok := <-ch2; !ok {
 			break
 		} else {
 			summaries = append(summaries, *s)
