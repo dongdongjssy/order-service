@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -25,20 +26,20 @@ const (
 // items which consists of item details, the count of purchased items,
 // and total cost etc for each individual customers.
 func TransformOrders(ctx *gin.Context) {
+	log.Info("receive a request")
+
 	// parse request body
 	var orders []model.Order
 	if err := ctx.ShouldBindJSON(&orders); err != nil {
 		// return error details
 		errors := parseValidationErrors(&err)
-		if len(*errors) > 0 {
-			ctx.JSON(http.StatusBadRequest, model.Response{
-				Code:    http.StatusBadRequest,
-				Message: ERR_INVALID_BODY,
-				Errors:  *errors,
-			})
-			return
-		}
-
+		ctx.JSON(http.StatusBadRequest, model.Response{
+			Code:    http.StatusBadRequest,
+			Message: ERR_INVALID_BODY,
+			Errors:  *errors,
+		})
+		log.Error(ERR_INVALID_BODY, *errors)
+		return
 	}
 
 	// transform orders
@@ -47,6 +48,7 @@ func TransformOrders(ctx *gin.Context) {
 		Message: API_SUCCESS,
 		Data:    *transformOrders(&orders),
 	})
+	log.Info("successfully processing the request")
 }
 
 // Parse validation errors with a list of readable strings.
@@ -143,10 +145,12 @@ func toLowerFirstChar(str string) string {
 //     }
 func transformOrders(orders *[]model.Order) *[]model.Summary {
 	// check duplication and aggregate customer orders
+	log.Info("checking duplications and aggregating customer orders...")
 	customerOrders := make(map[string]map[string]*model.Order)
 	for _, o := range *orders {
 		if customerOrders[o.CustomerId] != nil {
 			if customerOrders[o.CustomerId][o.OrderId] != nil {
+				log.Info("found duplicated order, skip it")
 				continue
 			} else {
 				customerOrders[o.CustomerId][o.OrderId] = &o
@@ -157,6 +161,7 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	}
 
 	// process data for each customer and put them into channel concurrently
+	log.Info("building a summary report...")
 	ch := make(chan *model.Summary, 100)
 	go func() {
 		for cId, oList := range customerOrders {

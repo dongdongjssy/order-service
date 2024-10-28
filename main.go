@@ -4,6 +4,7 @@ import (
 	_ "github.com/dongdongjssy/order-service/docs"
 	"github.com/dongdongjssy/order-service/handlers"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -23,5 +24,9 @@ func setupRouter() *gin.Engine {
 
 func main() {
 	server := setupRouter()
-	server.Run(":8080")
+	if err := server.Run(":8080"); err != nil {
+		log.Fatal("server fails to start duet to ", err)
+	} else {
+		log.Info("server is running on port 8080...")
+	}
 }
