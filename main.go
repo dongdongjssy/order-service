@@ -5,9 +5,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	ENDPOINT_ORDERS_TRANSFORM = "/v1/orders/transform"
+)
+
 func setupRouter() *gin.Engine {
 	server := gin.Default()
-	server.POST("/v1/orders/transform", handlers.TransformOrders)
+	server.POST(ENDPOINT_ORDERS_TRANSFORM, handlers.TransformOrders)
 	return server
 }
 
