@@ -161,7 +161,7 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	}
 
 	// process data for each customer and put them into channel concurrently
-	log.Info("building a summary report...")
+	log.Info("building a summary report for each customer...")
 	ch := make(chan *model.Summary, 100)
 	go func() {
 		for cId, oList := range customerOrders {

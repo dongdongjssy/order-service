@@ -15,6 +15,13 @@ const (
 func setupRouter() *gin.Engine {
 	server := gin.Default()
 
+	// TODO: add needed middlewares for
+	// - auth check
+	// - rate limit?
+	// - timeout?
+	// - XSS, CORS etc.
+	// server.Use(...)
+
 	// register swagger ui path
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	server.POST(ENDPOINT_ORDERS_TRANSFORM, handlers.TransformOrders)
