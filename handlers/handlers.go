@@ -198,8 +198,12 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	go func(<-chan *model.Summary) {
 		defer wg.Done()
 
-		for s := range ch {
-			summaries = append(summaries, *s)
+		for {
+			if s, ok := <-ch; !ok {
+				break
+			} else {
+				summaries = append(summaries, *s)
+			}
 		}
 	}(ch)
 
