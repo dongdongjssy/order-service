@@ -170,7 +170,7 @@ func TestOrdersTransformAPIErrorCases(t *testing.T) {
 		"missing timestamp":   {ordersMissingTimestamp, "error in field 'timestamp': required"},
 		"missing items":       {ordersMissingItems, "error in field 'items': required"},
 		"empty items":         {ordersWithEmptyItems, "error in field 'items': should contains at least 1 element"},
-		"invalid cost value":  {ordersWithInvalidCost, "error in field 'costEur': should be greater than or equal to 0"},
+		"invalid cost value":  {ordersWithInvalidCost, "error in field 'costEur': should be greater than 0"},
 	}
 
 	for name, test := range tests {
