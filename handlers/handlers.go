@@ -149,54 +149,53 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	wg.Add(2)
 
 	// check duplication and aggregate customer orders
-	log.Info("checking duplications and aggregating customer orders...")
-	ch1 := make(chan *model.Order, 100)
-	go func(chan<- *model.Order) {
-		defer wg.Done()
+	// log.Info("checking duplications and aggregating customer orders...")
+	// ch1 := make(chan *model.Order, 100)
+	// go func(chan<- *model.Order) {
+	// 	defer wg.Done()
 
-		coMapping := make(map[string]interface{}, len(*orders))
-		for _, o := range *orders {
-			key := fmt.Sprintf("%s:%s", o.CustomerId, o.OrderId)
-			if coMapping[key] == nil {
-				coMapping[key] = key
-				ch1 <- &o
-			} else {
-				continue
-			}
-		}
-		close(ch1)
-	}(ch1)
+	// 	coMapping := make(map[string]interface{}, len(*orders))
+	// 	for _, o := range *orders {
+	// 		key := fmt.Sprintf("%s:%s", o.CustomerId, o.OrderId)
+	// 		if coMapping[key] == nil {
+	// 			coMapping[key] = key
+	// 			ch1 <- &o
+	// 		} else {
+	// 			continue
+	// 		}
+	// 	}
+	// 	close(ch1)
+	// }(ch1)
 
 	// process data for each customer and put them into channel concurrently
 	log.Info("building a summary report for each customer...")
-	ch2 := make(chan *model.Summary, 100)
-	go func(<-chan *model.Order, chan<- *model.Summary) {
+	chanSummary := make(chan *model.Summary, 100)
+	go func(chan<- *model.Summary) {
 		defer wg.Done()
-		for o := range ch1 {
+		for _, o := range *orders {
 			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
 				return acc + i.CostEur
 			})
 
-			ch2 <- &model.Summary{
+			chanSummary <- &model.Summary{
 				CustomerId:          o.CustomerId,
 				NbrOfPurchasedItems: len(o.Items),
 				Items:               o.Items,
 				TotalAmountEur:      amount,
 			}
 		}
-		close(ch2)
-	}(ch1, ch2)
+		close(chanSummary)
+	}(chanSummary)
 
 	// get a list of summaries for all customers from the channel
-	wg.Wait()
 	summaries := make([]model.Summary, 0, len(*orders))
-	for {
-		if s, ok := <-ch2; !ok {
-			break
-		} else {
+	go func(<-chan *model.Summary) {
+		defer wg.Done()
+		for s := range chanSummary {
 			summaries = append(summaries, *s)
 		}
-	}
+	}(chanSummary)
 
+	wg.Wait()
 	return &summaries
 }
