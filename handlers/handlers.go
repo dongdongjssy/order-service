@@ -174,7 +174,10 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 			amount := 0.0
 			items := []model.Item{}
 			for _, o := range oList {
-				items = append(items, o.Items...)
+				for _, i := range o.Items {
+					i.CustomerId = cId
+					items = append(items, i)
+				}
 				amount = reduceAmount(&o.Items, amount, func(acc float64, i *model.Item) float64 {
 					return acc + i.CostEur
 				})

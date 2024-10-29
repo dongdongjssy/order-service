@@ -3,7 +3,6 @@ package main
 import (
 	_ "github.com/dongdongjssy/order-service/docs"
 	"github.com/dongdongjssy/order-service/handlers"
-	"github.com/dongdongjssy/order-service/middlewares"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -18,7 +17,7 @@ func setupRouter() *gin.Engine {
 
 	// TODO: add needed middlewares
 	// - auth check
-	server.Use(middlewares.AuthMiddleware)
+	server.Use(authMiddleware)
 	// - rate limit?
 	// - timeout?
 	// - XSS, CORS etc.
@@ -32,4 +31,22 @@ func setupRouter() *gin.Engine {
 func main() {
 	server := setupRouter()
 	server.Run(":8080")
+}
+
+// dummy auth middleware
+func authMiddleware(ctx *gin.Context) {
+	// jwtToken := ctx.GetHeader("authorization")
+	// if !strings.HasPrefix(jwtToken, "Bearer ") {
+	// 	ctx.JSON(http.StatusUnauthorized, model.Response{
+	// 		Code:    http.StatusUnauthorized,
+	// 		Message: "unauthorized",
+	// 		Errors:  []string{"Invalid JWT token, must start with 'Bearer '"},
+	// 	})
+	// 	return
+	// }
+
+	// slicedToken := jwtToken[strings.Index(jwtToken, " "):]
+	// call auth service to verify token
+
+	ctx.Next()
 }
