@@ -1,6 +1,12 @@
 # order-service
 
-This module provides 1 api for orders transform:
+The order service is used to transform orders. It accepts a list of customer orders and then transforms them into a list of objects, each object corresponding to an individual customer. The transformed object contains the number of items a customer purchased, the total cost amount of all items, and details of each purchased items etc.
+
+1. It receives orders from other services
+2. It calls auth service for authentication before transforming
+3. It sends result to other services for further processing (e.g. payment service)
+
+This module provides 1 POST api:
 
 | Method | Endpoint             | Description                                            |
 | ------ | -------------------- | ------------------------------------------------------ |
@@ -24,10 +30,28 @@ While service is running, the api docs can be found here: [Swagger docs](http://
 
 ## Auto tests
 
-To run all auto tests, in root folder run command:
+To run all auto tests(unit + integration), in root folder run command:
 
 ```sh
 go test ./... -v
+
+--- PASS: TestOrdersTransformAPISuccess (0.00s)
+    --- PASS: TestOrdersTransformAPISuccess/duplicated_order (0.00s)
+    --- PASS: TestOrdersTransformAPISuccess/aggregate_orders (0.00s)
+    --- PASS: TestOrdersTransformAPISuccess/single_order (0.00s)
+    --- PASS: TestOrdersTransformAPISuccess/multiple_orders (0.00s)
+--- PASS: TestOrdersTransformAPIErrorCases (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/invalid_cost_value (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/missing_customer_id (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/missing_order_id (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/missing_timestamp (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/missing_items (0.00s)
+    --- PASS: TestOrdersTransformAPIErrorCases/empty_items (0.00s)
+--- PASS: TestReduceAmount (0.00s)
+    --- PASS: TestReduceAmount/calculate_total_amount_of_all_items (0.00s)
+--- PASS: TestFirstCharToLowercase (0.00s)
+    --- PASS: TestFirstCharToLowercase/change_first_letter_of_a_string_to_lowercase (0.00s)
+    --- PASS: TestFirstCharToLowercase/change_an_empty_string (0.00s)
 ```
 
 ## Benchmark

@@ -11,6 +11,11 @@ paths:
       tags:
       - Orders
       parameters:
+        - description: JWT token, must start with 'Bearer '
+          in: header
+          name: authorization
+          required: true
+          type: string
         - description: a list of orders
           in: body
           name: orders
@@ -26,6 +31,14 @@ paths:
             $ref: '#/definitions/SuccessResponse'
         "400":
           description: bad request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
         "500":

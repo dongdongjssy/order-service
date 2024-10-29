@@ -81,6 +81,7 @@ func TestOrdersTransformAPISuccess(t *testing.T) {
 
 			assert.Equal(http.StatusOK, response.Code)
 			assert.Equal(handlers.API_SUCCESS, response.Message)
+			assert.Equal(1, len(response.Data))
 			assert.Equal(test.nbrOfPurchasedItems, response.Data[0].NbrOfPurchasedItems)
 			assert.Equal(test.nbrOfPurchasedItems, len(response.Data[0].Items))
 			assert.Equal(test.totalAmountEur, response.Data[0].TotalAmountEur)
@@ -196,6 +197,7 @@ func TestOrdersTransformAPIErrorCases(t *testing.T) {
 func postRequest(server *gin.Engine, body *strings.Reader) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, ENDPOINT_ORDERS_TRANSFORM, body)
+	req.Header.Set("authorization", "Bearer abc")
 	server.ServeHTTP(rec, req)
 
 	return rec

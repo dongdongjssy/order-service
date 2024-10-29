@@ -19,35 +19,56 @@ const docTemplate = `{
                 "tags" : [ "Orders" ],
                 "summary" : "Transform a list of orders",
                 "description" : "It transforms a list of orders to the format of a list of customer items which consists of item details, the count of purchased items, and total cost etc.",
-                "parameters" : [ {
-                    "in" : "body",
-                    "name" : "orders",
-                    "description" : "a list of orders",
-                    "required" : true,
-                    "schema" : {
-                        "type" : "array",
-                        "items" : {
-                        "$ref" : "#/definitions/Order"
+                "parameters" : [
+                    {
+                        "name": "authorization",
+                        "description": "JWT token, it must start with 'Bearer '",
+                        "in": "header",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in" : "body",
+                        "name" : "orders",
+                        "description" : "a list of orders",
+                        "required" : true,
+                        "schema" : {
+                            "type" : "array",
+                            "items" : {
+                            "$ref" : "#/definitions/Order"
+                            }
                         }
                     }
-                } ],
+                ],
                 "responses" : {
                     "200" : {
                         "description" : "success",
                         "schema" : {
-                        "$ref" : "#/definitions/SuccessResponse"
+                            "$ref" : "#/definitions/SuccessResponse"
                         }
                     },
                     "400" : {
                         "description" : "bad request",
                         "schema" : {
-                        "$ref" : "#/definitions/ErrorResponse"
+                            "$ref" : "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "500" : {
                         "description" : "internal server error",
                         "schema" : {
-                        "$ref" : "#/definitions/ErrorResponse"
+                            "$ref" : "#/definitions/ErrorResponse"
                         }
                     }
                 }

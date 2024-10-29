@@ -15,12 +15,12 @@ const (
 func setupRouter() *gin.Engine {
 	server := gin.Default()
 
-	// TODO: add needed middlewares for
+	// TODO: add needed middlewares
 	// - auth check
+	server.Use(authMiddleware)
 	// - rate limit?
 	// - timeout?
 	// - XSS, CORS etc.
-	// server.Use(...)
 
 	// register swagger ui path
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -31,4 +31,22 @@ func setupRouter() *gin.Engine {
 func main() {
 	server := setupRouter()
 	server.Run(":8080")
+}
+
+// dummy auth middleware
+func authMiddleware(ctx *gin.Context) {
+	// jwtToken := ctx.GetHeader("authorization")
+	// if !strings.HasPrefix(jwtToken, "Bearer ") {
+	// 	ctx.JSON(http.StatusUnauthorized, model.Response{
+	// 		Code:    http.StatusUnauthorized,
+	// 		Message: "unauthorized",
+	// 		Errors:  []string{"Invalid JWT token, must start with 'Bearer '"},
+	// 	})
+	// 	return
+	// }
+
+	// slicedToken := jwtToken[strings.Index(jwtToken, " "):]
+	// call auth service to verify token
+
+	ctx.Next()
 }
