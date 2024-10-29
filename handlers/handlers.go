@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"unicode"
 
 	"github.com/dongdongjssy/order-service/model"
@@ -160,10 +161,15 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 		}
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// process data for each customer and put them into channel concurrently
 	log.Info("building a summary report for each customer...")
 	ch := make(chan *model.Summary, 100)
-	go func() {
+	go func(chan<- *model.Summary) {
+		defer wg.Done()
+
 		for cId, oList := range customerOrders {
 			amount := 0.0
 			items := []model.Item{}
@@ -182,17 +188,18 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 			}
 		}
 		close(ch)
-	}()
+	}(ch)
 
 	// get a list of summaries for all customers from the channel
 	summaries := make([]model.Summary, 0, len(customerOrders))
-	for {
-		if s, ok := <-ch; !ok {
-			break
-		} else {
+	go func(<-chan *model.Summary) {
+		defer wg.Done()
+
+		for s := range ch {
 			summaries = append(summaries, *s)
 		}
-	}
+	}(ch)
 
+	wg.Wait()
 	return &summaries
 }
