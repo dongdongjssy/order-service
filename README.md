@@ -1,6 +1,12 @@
 # order-service
 
-This module provides 1 api for orders transform:
+The order service is used to transform orders. It accepts a list of customer orders and then transforms them into a list of objects, each object corresponding to an individual customer. The transformed object contains the number of items a customer purchased, the total cost amount of all items, and details of each purchased items etc.
+
+1. It receives orders from other services
+2. It calls auth service for authentication before transforming
+3. It sends result to other services for further processing (e.g. payment service)
+
+This module provides 1 POST api:
 
 | Method | Endpoint             | Description                                            |
 | ------ | -------------------- | ------------------------------------------------------ |
