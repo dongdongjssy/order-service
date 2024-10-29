@@ -169,10 +169,13 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 
 	// process data for each customer and put them into channel concurrently
 	log.Info("building a summary report for each customer...")
+
 	ch := make(chan *model.Summary, 100)
-	go func(chan<- *model.Summary) {
+	total := len(*orders)
+
+	go func() {
 		defer wg.Done()
-		for _, o := range *orders {
+		for _, o := range (*orders)[:total/2] {
 			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
 				return acc + i.CostEur
 			})
@@ -184,18 +187,40 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 				TotalAmountEur:      amount,
 			}
 		}
-		close(ch)
-	}(ch)
+		// close(ch)
+	}()
+
+	go func() {
+		defer wg.Done()
+		for _, o := range (*orders)[total/2:] {
+			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
+				return acc + i.CostEur
+			})
+
+			ch <- &model.Summary{
+				CustomerId:          o.CustomerId,
+				NbrOfPurchasedItems: len(o.Items),
+				Items:               o.Items,
+				TotalAmountEur:      amount,
+			}
+		}
+		// close(ch)
+	}()
 
 	// get a list of summaries for all customers from the channel
 	summaries := make([]model.Summary, 0, len(*orders))
-	go func(<-chan *model.Summary) {
+	go func() {
 		defer wg.Done()
-		for s := range ch {
-			summaries = append(summaries, *s)
+		for {
+			if s, ok := <-ch; !ok {
+				break
+			} else {
+				summaries = append(summaries, *s)
+			}
 		}
-	}(ch)
+	}()
 
 	wg.Wait()
+	// close(ch)
 	return &summaries
 }
