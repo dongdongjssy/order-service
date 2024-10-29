@@ -197,6 +197,7 @@ func TestOrdersTransformAPIErrorCases(t *testing.T) {
 func postRequest(server *gin.Engine, body *strings.Reader) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, ENDPOINT_ORDERS_TRANSFORM, body)
+	req.Header.Set("authorization", "Bearer abc")
 	server.ServeHTTP(rec, req)
 
 	return rec
