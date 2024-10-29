@@ -18,9 +18,10 @@ func setupRouter() *gin.Engine {
 	// TODO: add needed middlewares
 	// - auth check
 	server.Use(authMiddleware)
-	// - rate limit?
+	// - rate limit? golang.org/x/time/rate
 	// - timeout?
-	// - XSS, CORS etc.
+	// - XSS? github.com/microcosm-cc/bluemonday
+	// - CORS? github.com/gin-contrib/cors
 
 	// register swagger ui path
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
