@@ -3,6 +3,7 @@ module github.com/dongdongjssy/order-service
 go 1.23.1
 
 require (
+	github.com/gin-contrib/gzip v1.0.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/sirupsen/logrus v1.9.3

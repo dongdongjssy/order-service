@@ -144,8 +144,9 @@ func toLowerFirstChar(str string) string {
 //     {"itemId": "20202","costEur": 2}
 //     ]
 //     }
+var wg sync.WaitGroup
+
 func transformOrders(orders *[]model.Order) *[]model.Summary {
-	var wg sync.WaitGroup
 	wg.Add(2)
 
 	// check duplication and aggregate customer orders
@@ -171,11 +172,11 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	log.Info("building a summary report for each customer...")
 
 	ch := make(chan *model.Summary, 100)
-	total := len(*orders)
+	// total := len(*orders)
 
 	go func() {
 		defer wg.Done()
-		for _, o := range (*orders)[:total/2] {
+		for _, o := range *orders {
 			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
 				return acc + i.CostEur
 			})
@@ -187,25 +188,25 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 				TotalAmountEur:      amount,
 			}
 		}
-		// close(ch)
+
+		close(ch)
 	}()
 
-	go func() {
-		defer wg.Done()
-		for _, o := range (*orders)[total/2:] {
-			amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
-				return acc + i.CostEur
-			})
+	// go func() {
+	// 	defer wg.Done()
+	// 	for _, o := range (*orders)[total/2:] {
+	// 		amount := reduceAmount(&o.Items, 0.0, func(acc float64, i *model.Item) float64 {
+	// 			return acc + i.CostEur
+	// 		})
 
-			ch <- &model.Summary{
-				CustomerId:          o.CustomerId,
-				NbrOfPurchasedItems: len(o.Items),
-				Items:               o.Items,
-				TotalAmountEur:      amount,
-			}
-		}
-		// close(ch)
-	}()
+	// 		ch <- &model.Summary{
+	// 			CustomerId:          o.CustomerId,
+	// 			NbrOfPurchasedItems: len(o.Items),
+	// 			Items:               o.Items,
+	// 			TotalAmountEur:      amount,
+	// 		}
+	// 	}
+	// }()
 
 	// get a list of summaries for all customers from the channel
 	summaries := make([]model.Summary, 0, len(*orders))
@@ -221,6 +222,5 @@ func transformOrders(orders *[]model.Order) *[]model.Summary {
 	}()
 
 	wg.Wait()
-	// close(ch)
 	return &summaries
 }
